@@ -41,7 +41,6 @@ Open `index.html` directly in any browser. Realistic mock data loads automatical
 
 ```bash
 cp config.example.js config.js
-cp .env.example .env
 ```
 
 **Step 3** — Insert your key in `config.js`:
@@ -50,11 +49,8 @@ cp .env.example .env
 window.GRAPH_API_KEY = 'your-key-here';
 ```
 
-And in `.env`:
-
-```
-GRAPH_API_KEY=your-key-here
-```
+> `config.js` is the single source of truth for the API key. It is gitignored so your key is never committed.
+> (No `.env` needed — browsers cannot read `.env` files directly.)
 
 **Step 4** — Open in browser or serve locally:
 
@@ -121,11 +117,9 @@ to rank chains by USDC pressure, or `USDT AVAIL. LIQ` to find the tightest USDT 
 ```
 aave-risk-terminal/
 ├── index.html          Main application — open this in a browser
-├── config.js           Your API key (gitignored — do not commit)
-├── config.example.js   Template for config.js
-├── .env                Server-side key reference (gitignored)
-├── .env.example        Template for .env
-├── .gitignore          Excludes config.js and .env from git
+├── config.js           Your API key (gitignored — never commit)
+├── config.example.js   Template → copy to config.js and add your key
+├── .gitignore          Excludes config.js from git
 ├── fonts/
 │   ├── SpaceMono-Regular.ttf / .woff2
 │   └── SpaceMono-Bold.ttf / .woff2
