@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AAVE RISK TERMINAL // STABLECOIN MONITOR</title>
+  <style>
+    @font-face {
+      font-family: 'Space Mono';
+      font-weight: 400;
+      src: url('fonts/SpaceMono-Regular.ttf') format('truetype');
+    }
+    @font-face {
+      font-family: 'Space Mono';
+      font-weight: 700;
+      src: url('fonts/SpaceMono-Bold.ttf') format('truetype');
+    }
+  </style>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --void:        #030810;
+      --deep:        #060e1c;
+      --panel:       #091525;
+      --card:        #0c1d30;
+      --hover:       #0f2438;
+      --border-dim:  #0f2035;
+      --border-base: #163350;
+      --border-glow: #1e4f78;
+      --text-dim:    #1e3f5a;
+      --text-muted:  #3a6a8a;
+      --text-base:   #6aaabf;
+      --text-bright: #a0cce0;
+      --text-white:  #cce8f8;
+      --cyan:        #00ccff;
+      --cyan-dim:    #007799;
+      --green:       #00ff88;
+      --green-dim:   #00994d;
+      --amber:       #ffaa00;
+      --amber-dim:   #996600;
+      --red:         #ff3355;
+      --red-dim:     #99112d;
+      --purple:      #bb66ff;
+    }
+
+    /* ── Animations ─────────────────────────────────────── */
+    @keyframes scanline {
+      0%   { transform: translateY(-200px); }
+      100% { transform: translateY(100vh); }
+    }
+    @keyframes flicker {
+      0%, 97%, 100% { opacity: 1; }
+      98%           { opacity: .8; }
+      99%           { opacity: 1; }
+    }
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%,100% { opacity: 0; }
+    }
+    @keyframes pulse-red {
+      0%,100% { opacity: 1; }
+      50%     { opacity: .5; }
+    }
+    @keyframes ticker-scroll {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    @keyframes row-in {
+      from { opacity: 0; transform: translateX(-6px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── Base ───────────────────────────────────────────── */
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Space Mono', monospace;
+      background-color: var(--void);
+      background-image:
+        linear-gradient(rgba(0,204,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,204,255,.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+      background-attachment: fixed;
+      color: var(--text-base);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* CRT scanlines */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,.12) 2px,
+        rgba(0,0,0,.12) 4px
+      );
+      pointer-events: none;
+      z-index: 9000;
+    }
+
+    /* Moving scanline beam */
+    body::after {
+      content: '';
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 160px;
+      background: linear-gradient(transparent, rgba(0,204,255,.035), transparent);
+      animation: scanline 10s linear infinite;
+      pointer-events: none;
+      z-index: 8999;
+    }
+
+    /* ── Alert Ticker ───────────────────────────────────── */
+    .ticker-wrap {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border-base);
+      overflow: hidden;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+    .ticker-label {
+      flex-shrink: 0;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .35em;
+      color: var(--void);
+      background: var(--amber);
+      padding: 0 12px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      z-index: 1;
+    }
+    .ticker-track {
+      display: flex;
+      white-space: nowrap;
+      animation: ticker-scroll 30s linear infinite;
+    }
+    .ticker-item {
+      font-size: 10px;
+      letter-spacing: .2em;
+      color: var(--text-muted);
+      padding: 0 32px;
+    }
+    .ticker-item.warn  { color: var(--amber); }
+    .ticker-item.crit  { color: var(--red); animation: pulse-red 1.2s infinite; }
+    .ticker-item.ok    { color: var(--green-dim); }
+
+    /* ── Container ─────────────────────────────────────── */
+    .container {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 24px 28px 48px;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-base);
+      margin-bottom: 22px;
+      position: relative;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 0;
+      width: 35%; height: 1px;
+      background: linear-gradient(90deg, var(--cyan), transparent);
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    .logo-eyebrow {
+      font-size: 9px;
+      letter-spacing: .5em;
+      color: var(--cyan-dim);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .logo-title {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--text-white);
+      text-shadow: 0 0 24px rgba(0,204,255,.45), 0 0 48px rgba(0,204,255,.15);
+      animation: flicker 18s infinite;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .logo-title em {
+      color: var(--cyan);
+      font-style: normal;
+    }
+    .logo-sub {
+      font-size: 10px;
+      letter-spacing: .28em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .header-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    .live-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .3em;
+      color: var(--green);
+    }
+    .live-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green), 0 0 12px var(--green);
+      animation: blink 1.6s infinite;
+    }
+    .last-update-time {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: .18em;
+    }
+    .sys-badge {
+      font-size: 9px;
+      color: var(--cyan-dim);
+      border: 1px solid var(--border-glow);
+      padding: 2px 9px;
+      letter-spacing: .2em;
+    }
+
+    /* ── Controls ───────────────────────────────────────── */
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .token-tabs {
+      display: flex;
+      border: 1px solid var(--border-glow);
+      overflow: hidden;
+    }
+    .tab-btn {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .35em;
+      text-transform: uppercase;
+      padding: 9px 28px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all .12s;
+      position: relative;
+    }
+    .tab-btn + .tab-btn { border-left: 1px solid var(--border-base); }
+    .tab-btn:hover { color: var(--text-bright); background: var(--card); }
+    .tab-btn.active {
+      background: var(--cyan);
+      color: var(--void);
+      text-shadow: none;
+    }
+
+    .controls-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .chain-tally {
+      font-size: 10px;
+      letter-spacing: .18em;
+      color: var(--text-muted);
+    }
+    .chain-tally strong { color: var(--cyan); font-weight: 400; }
+
+    .icon-btn {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .25em;
+      text-transform: uppercase;
+      padding: 8px 16px;
+      border: 1px solid var(--border-glow);
+      background: transparent;
+      color: var(--text-base);
+      cursor: pointer;
+      transition: all .12s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .icon-btn:hover { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 8px rgba(0,204,255,.2); }
+    .icon-btn .spin { display: none; }
+    .icon-btn.loading .spin { display: inline-block; animation: spin .8s linear infinite; }
+    .icon-btn.loading .label { opacity: .5; }
+
+    /* ── Table ──────────────────────────────────────────── */
+    .tbl-shell {
+      position: relative;
+      border: 1px solid var(--border-base);
+      background: var(--deep);
+      overflow-x: auto;
+      /* Corner brackets */
+    }
+    .tbl-shell::before { content: ''; position: absolute; top:-1px; left:-1px; width:14px; height:14px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); pointer-events:none; z-index:1; }
+    .tbl-shell .br-tr  { position: absolute; top:-1px; right:-1px; width:14px; height:14px; border-top:2px solid var(--cyan); border-right:2px solid var(--cyan); pointer-events:none; z-index:1; }
+    .tbl-shell .br-bl  { position: absolute; bottom:-1px; left:-1px; width:14px; height:14px; border-bottom:2px solid var(--cyan); border-left:2px solid var(--cyan); pointer-events:none; z-index:1; }
+    .tbl-shell .br-br  { position: absolute; bottom:-1px; right:-1px; width:14px; height:14px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); pointer-events:none; z-index:1; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead tr {
+      background: var(--card);
+      border-bottom: 1px solid var(--border-base);
+    }
+    th {
+      padding: 13px 16px;
+      text-align: left;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .35em;
+      text-transform: uppercase;
+      color: var(--cyan-dim);
+      white-space: nowrap;
+      border-right: 1px solid var(--border-dim);
+      cursor: pointer;
+      user-select: none;
+      transition: color .12s;
+    }
+    th:last-child { border-right: none; cursor: default; }
+    th:hover:not(:last-child) { color: var(--cyan); }
+    th.sorted { color: var(--cyan); }
+    th .sort-arrow { margin-left: 4px; opacity: .4; }
+    th.sorted .sort-arrow { opacity: 1; }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border-dim);
+      transition: background .1s;
+    }
+    tbody tr:hover { background: var(--hover); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr.row-v4 { background: rgba(187,102,255,.04); }
+    tbody tr.row-v4:hover { background: rgba(187,102,255,.08); }
+
+    td {
+      padding: 13px 16px;
+      border-right: 1px solid var(--border-dim);
+      vertical-align: middle;
+    }
+    td:last-child { border-right: none; }
+
+    /* Section divider rows */
+    .section-row td {
+      font-size: 9px;
+      letter-spacing: .35em;
+      color: var(--text-dim);
+      background: var(--void);
+      padding: 6px 16px;
+      border-bottom: 1px solid var(--border-dim);
+    }
+
+    /* ── Chain cell ─────────────────────────────────────── */
+    .chain-cell { display: flex; align-items: center; gap: 11px; }
+    .chain-icon {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700;
+      flex-shrink: 0;
+      letter-spacing: 0;
+    }
+    .chain-name { font-weight: 700; color: var(--text-white); letter-spacing: .1em; font-size: 12px; }
+    .chain-ver  { font-size: 9px; color: var(--text-dim); letter-spacing: .2em; margin-top: 2px; }
+
+    /* ── APY values ─────────────────────────────────────── */
+    .val-supply {
+      font-weight: 700; font-size: 15px;
+      color: var(--green);
+      text-shadow: 0 0 10px rgba(0,255,136,.3);
+    }
+    .val-borrow { font-weight: 700; font-size: 15px; color: var(--amber); }
+    .val-na     { color: var(--text-dim); font-size: 11px; letter-spacing: .1em; }
+    .demo-tag   { font-size: 8px; color: var(--amber-dim); letter-spacing: .15em; display: block; margin-top: 2px; }
+
+    /* ── Utilization ────────────────────────────────────── */
+    .util-wrap { min-width: 160px; }
+    .util-top  { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .util-pct  { font-weight: 700; font-size: 14px; }
+    .util-track {
+      width: 100%; height: 5px;
+      background: var(--border-dim);
+      border: 1px solid var(--border-base);
+      position: relative;
+      overflow: hidden;
+    }
+    .util-fill { height: 100%; transition: width .7s cubic-bezier(.4,0,.2,1); }
+
+    .u-low  .util-pct  { color: var(--green); }
+    .u-low  .util-fill { background: var(--green); box-shadow: 0 0 4px var(--green); }
+    .u-med  .util-pct  { color: var(--amber); }
+    .u-med  .util-fill { background: var(--amber); box-shadow: 0 0 4px var(--amber); }
+    .u-high .util-pct  { color: #ff6633; }
+    .u-high .util-fill { background: #ff6633; box-shadow: 0 0 4px #ff6633; }
+    .u-crit .util-pct  { color: var(--red); text-shadow: 0 0 8px rgba(255,51,85,.6); animation: pulse-red 1s infinite; }
+    .u-crit .util-fill { background: var(--red); box-shadow: 0 0 6px var(--red); animation: pulse-red 1s infinite; }
+
+    /* ── Liquidity ──────────────────────────────────────── */
+    .liq-val { font-weight: 700; font-size: 14px; }
+    .liq-lbl { font-size: 9px; color: var(--text-dim); letter-spacing: .15em; margin-top: 2px; }
+    .liq-h   { color: var(--green); }
+    .liq-m   { color: var(--text-bright); }
+    .liq-l   { color: var(--amber); }
+    .liq-c   { color: var(--red); text-shadow: 0 0 6px rgba(255,51,85,.5); }
+
+    /* ── Market size ────────────────────────────────────── */
+    .mkt-val { font-size: 13px; color: var(--text-muted); }
+    .mkt-lbl { font-size: 9px; color: var(--text-dim); letter-spacing: .12em; margin-top: 2px; }
+
+    /* ── Risk badge ─────────────────────────────────────── */
+    .risk-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      font-size: 9px; font-weight: 700;
+      letter-spacing: .3em;
+      text-transform: uppercase;
+      border: 1px solid;
+    }
+    .r-low  { color: var(--green);  border-color: var(--green);  background: rgba(0,255,136,.05); }
+    .r-med  { color: var(--amber);  border-color: var(--amber);  background: rgba(255,170,0,.05); }
+    .r-high { color: #ff6633;       border-color: #ff6633;       background: rgba(255,102,51,.05); }
+    .r-crit { color: var(--red);    border-color: var(--red);    background: rgba(255,51,85,.05); animation: pulse-red 1.4s infinite; }
+
+    /* ── State rows ─────────────────────────────────────── */
+    .state-row td {
+      text-align: center; padding: 44px;
+      letter-spacing: .25em;
+    }
+    .loading-row td { color: var(--text-dim); animation: pulse-red 1.8s infinite; }
+    .empty-row   td { color: var(--text-dim); }
+    .no-asset    td { color: var(--text-dim); font-size: 11px; letter-spacing: .15em; padding: 12px 16px; }
+
+    /* ── Summary strip ──────────────────────────────────── */
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border-dim);
+      border: 1px solid var(--border-base);
+      border-top: none;
+      margin-bottom: 20px;
+    }
+    .sum-item {
+      background: var(--panel);
+      padding: 14px 18px;
+    }
+    .sum-lbl { font-size: 9px; color: var(--text-dim); letter-spacing: .32em; text-transform: uppercase; margin-bottom: 4px; }
+    .sum-val { font-size: 20px; font-weight: 700; color: var(--text-white); line-height: 1.1; }
+    .sum-sub { font-size: 9px; color: var(--text-muted); letter-spacing: .12em; margin-top: 3px; }
+
+    /* ── Legend ─────────────────────────────────────────── */
+    .legend {
+      display: flex; align-items: center; flex-wrap: wrap;
+      gap: 20px; padding: 12px 0;
+      border-top: 1px solid var(--border-dim);
+      margin-top: 14px;
+    }
+    .legend-hd { font-size: 9px; color: var(--text-dim); letter-spacing: .4em; text-transform: uppercase; }
+    .legend-set { display: flex; gap: 14px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-muted); letter-spacing: .1em; }
+    .legend-swatch { width: 9px; height: 9px; border: 1px solid; }
+    .legend-src { margin-left: auto; font-size: 9px; color: var(--text-dim); letter-spacing: .15em; }
+
+    /* ── Footer ─────────────────────────────────────────── */
+    .footer {
+      margin-top: 28px; padding-top: 14px;
+      border-top: 1px solid var(--border-dim);
+      display: flex; justify-content: space-between;
+      align-items: center; flex-wrap: wrap; gap: 10px;
+    }
+    .footer-l { font-size: 9px; color: var(--text-dim); letter-spacing: .18em; }
+    .footer-r { font-size: 9px; color: var(--text-dim); letter-spacing: .15em; }
+    .footer-r a { color: var(--cyan-dim); text-decoration: none; }
+    .footer-r a:hover { color: var(--cyan); }
+
+    /* ── Responsive ─────────────────────────────────────── */
+    @media (max-width: 960px) {
+      .summary-strip { grid-template-columns: 1fr 1fr; }
+      .logo-title { font-size: 22px; }
+    }
+    @media (max-width: 640px) {
+      .container { padding: 14px 16px 32px; }
+      .header { flex-direction: column; gap: 14px; }
+      .header-meta { align-items: flex-start; }
+      .controls { flex-direction: column; align-items: flex-start; }
+      .summary-strip { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Alert Ticker -->
+<div class="ticker-wrap">
+  <div class="ticker-label">// ALERTS</div>
+  <div style="overflow:hidden; flex:1;">
+    <div class="ticker-track" id="ticker-track">
+      <span class="ticker-item ok">SYSTEM ONLINE</span>
+      <span class="ticker-item">MONITORING 10 NETWORKS</span>
+      <span class="ticker-item">AAVE V3 ACTIVE</span>
+      <span class="ticker-item ok">SYSTEM ONLINE</span>
+      <span class="ticker-item">MONITORING 10 NETWORKS</span>
+      <span class="ticker-item">AAVE V3 ACTIVE</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Header -->
+  <header class="header">
+    <div>
+      <div class="logo-eyebrow">// DEFI SURVEILLANCE SYSTEM — PROTOCOL RISK LAYER</div>
+      <div class="logo-title">AAVE <em>RISK</em> TERMINAL</div>
+      <div class="logo-sub">Stablecoin Pool Monitor &nbsp;&bull;&nbsp; V3 &amp; V4 Networks &nbsp;&bull;&nbsp; Cross-Chain</div>
+    </div>
+    <div class="header-meta">
+      <div class="live-pill"><div class="live-dot"></div>LIVE FEED</div>
+      <div class="last-update-time" id="last-update">LAST UPDATE: --:--:-- UTC</div>
+      <div class="sys-badge">TERMINAL v1.0</div>
+    </div>
+  </header>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="token-tabs">
+      <button class="tab-btn active" id="tab-usdc" onclick="setToken('USDC')">USDC</button>
+      <button class="tab-btn"        id="tab-usdt" onclick="setToken('USDT')">USDT</button>
+    </div>
+    <div class="controls-right">
+      <div class="chain-tally">SCANNING <strong id="chain-count">0</strong> CHAINS</div>
+      <button class="icon-btn" id="refresh-btn" onclick="refreshData()">
+        <span class="spin">&#x21BB;</span>
+        <span class="label">[ REFRESH ]</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="tbl-shell">
+    <div class="br-tr"></div><div class="br-bl"></div><div class="br-br"></div>
+    <table>
+      <thead>
+        <tr>
+          <th style="min-width:170px" data-col="name">NETWORK <span class="sort-arrow"></span></th>
+          <th style="min-width:90px"  data-col="risk">RISK <span class="sort-arrow"></span></th>
+          <th style="min-width:105px" data-col="supplyApy">SUPPLY APY <span class="sort-arrow"></span></th>
+          <th style="min-width:105px" data-col="borrowApy">BORROW APY <span class="sort-arrow"></span></th>
+          <th style="min-width:195px" data-col="utilization">UTILIZATION <span class="sort-arrow"></span></th>
+          <th style="min-width:145px" data-col="availLiq">AVAIL. LIQUIDITY <span class="sort-arrow"></span></th>
+          <th style="min-width:135px" data-col="marketSize">MARKET SIZE <span class="sort-arrow"></span></th>
+          <th style="min-width:50px"  >VER.</th>
+        </tr>
+      </thead>
+      <tbody id="tbl-body">
+        <tr class="state-row loading-row"><td colspan="8">// INITIALIZING DATA FEED ...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Summary Strip -->
+  <div class="summary-strip">
+    <div class="sum-item">
+      <div class="sum-lbl">AVG SUPPLY APY</div>
+      <div class="sum-val" id="s-apy">--.--<span style="font-size:12px; color:var(--text-muted)">%</span></div>
+      <div class="sum-sub">ACROSS ALL CHAINS</div>
+    </div>
+    <div class="sum-item">
+      <div class="sum-lbl">AVG UTILIZATION</div>
+      <div class="sum-val" id="s-util">--.--<span style="font-size:12px; color:var(--text-muted)">%</span></div>
+      <div class="sum-sub">WEIGHTED BY POOL SIZE</div>
+    </div>
+    <div class="sum-item">
+      <div class="sum-lbl">TOTAL AVAIL. LIQUIDITY</div>
+      <div class="sum-val" id="s-liq">$--.-<span style="font-size:12px; color:var(--text-muted)">B</span></div>
+      <div class="sum-sub">WITHDRAWABLE NOW</div>
+    </div>
+    <div class="sum-item">
+      <div class="sum-lbl">HIGH RISK POOLS</div>
+      <div class="sum-val" id="s-risk" style="color:var(--red)">--</div>
+      <div class="sum-sub">UTIL &gt; 85% OR LIQ &lt; $10M</div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <span class="legend-hd">// RISK INDEX</span>
+    <div class="legend-set">
+      <div class="legend-item">
+        <div class="legend-swatch" style="border-color:var(--green); background:rgba(0,255,136,.15)"></div>
+        LOW &lt;70%
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="border-color:var(--amber); background:rgba(255,170,0,.15)"></div>
+        MEDIUM 70–85%
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="border-color:#ff6633; background:rgba(255,102,51,.15)"></div>
+        HIGH 85–92%
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="border-color:var(--red); background:rgba(255,51,85,.15)"></div>
+        CRITICAL &gt;92%
+      </div>
+    </div>
+    <div class="legend-src">DATA: THE GRAPH // AAVE V3 PROTOCOL SUBGRAPHS</div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-l">NOT FINANCIAL ADVICE // FOR MONITORING PURPOSES ONLY // DATA MAY BE DELAYED</div>
+    <div class="footer-r">
+      POWERED BY <a href="https://aave.com" target="_blank">AAVE PROTOCOL</a>
+      &nbsp;//&nbsp;
+      <a href="https://thegraph.com" target="_blank">THE GRAPH</a>
+    </div>
+  </footer>
+
+</div><!-- /container -->
+
+<script>
+/* ============================================================
+   CONFIG
+   ============================================================ */
+
+/**
+ * Drop your Graph API key here (https://thegraph.com/studio/)
+ * Leave empty to run in demo mode with realistic mock data.
+ */
+const GRAPH_API_KEY = '';
+
+const CHAINS = [
+  { id: 'ethereum',  name: 'ETHEREUM',   ver: 'V3', abbr: 'ETH',  col: '#627eea', chainId: 1,
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3' },
+  { id: 'arbitrum',  name: 'ARBITRUM',   ver: 'V3', abbr: 'ARB',  col: '#28a0f0', chainId: 42161,
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-arbitrum' },
+  { id: 'polygon',   name: 'POLYGON',    ver: 'V3', abbr: 'POL',  col: '#8247e5', chainId: 137,
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-polygon' },
+  { id: 'optimism',  name: 'OPTIMISM',   ver: 'V3', abbr: 'OPT',  col: '#ff0420', chainId: 10,
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-optimism' },
+  { id: 'base',      name: 'BASE',       ver: 'V3', abbr: 'BASE', col: '#0052ff', chainId: 8453,
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-base' },
+  { id: 'avalanche', name: 'AVALANCHE',  ver: 'V3', abbr: 'AVAX', col: '#e84142', chainId: 43114,
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-avalanche' },
+  { id: 'gnosis',    name: 'GNOSIS',     ver: 'V3', abbr: 'GNO',  col: '#048848', chainId: 100,
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-gnosis' },
+  { id: 'scroll',    name: 'SCROLL',     ver: 'V3', abbr: 'SCR',  col: '#ffeeda', chainId: 534352,
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-scroll' },
+  { id: 'bnb',       name: 'BNB CHAIN',  ver: 'V3', abbr: 'BNB',  col: '#f3ba2f', chainId: 56,
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-bnb' },
+  { id: 'metis',     name: 'METIS',      ver: 'V3', abbr: 'MTS',  col: '#00dacc', chainId: 1088,
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-metis' },
+  /* Aave V4 — uncomment when live
+  { id: 'ethereum-v4', name: 'ETHEREUM', ver: 'V4', abbr: 'ETH',  col: '#627eea', chainId: 1, url: '' },
+  */
+];
+
+// Token symbol variants per asset
+const SYMS = {
+  USDC: ['USDC', 'USDCn', 'USDC.e', 'USDbC'],
+  USDT: ['USDT', 'USDt',  'USDT.e'],
+};
+
+const GQL = `
+  query($syms:[String!]) {
+    reserves(where:{symbol_in:$syms, isActive:true, isFrozen:false}) {
+      id symbol decimals
+      liquidityRate variableBorrowRate
+      availableLiquidity totalCurrentVariableDebt
+      totalLiquidity
+    }
+  }
+`;
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let token     = 'USDC';
+let allData   = {};          // { chainId: { USDC: {...}, USDT: {...} } }
+let sortCol   = 'utilization';
+let sortDir   = -1;          // -1 = desc, 1 = asc
+let loading   = false;
+
+/* ============================================================
+   MOCK DATA
+   ============================================================ */
+function mockRow(seed, tok) {
+  // Deterministic pseudo-random from seed
+  const rnd = (n) => ((seed * 9301 + n * 49297 + 233) % 233280) / 233280;
+  const util       = 0.45 + rnd(1) * 0.50;                  // 45–95 %
+  const supplyApy  = util * 11 + rnd(2) * 2;
+  const borrowApy  = supplyApy / (util + .01) * (1 - 0.08 - rnd(3) * 0.04);
+  const mktSize    = (8 + rnd(4) * 492) * 1e6;               // $8M – $500M
+  const availLiq   = mktSize * (1 - util);
+
+  return { supplyApy, borrowApy, utilization: util * 100,
+           availLiq, marketSize: mktSize, demo: true };
+}
+
+/* ============================================================
+   FETCH
+   ============================================================ */
+async function fetchChain(chain) {
+  if (!GRAPH_API_KEY) {
+    const s1 = chain.chainId ^ 0xabc;
+    const s2 = (chain.chainId ^ 0xdef) + 100;
+    return { USDC: mockRow(s1, 'USDC'), USDT: mockRow(s2, 'USDT') };
+  }
+
+  try {
+    const res = await fetch(chain.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: GQL,
+        variables: { syms: [...SYMS.USDC, ...SYMS.USDT] }
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const { data, errors } = await res.json();
+    if (errors) throw new Error(errors[0].message);
+
+    const out = {};
+    for (const [tok, symbols] of Object.entries(SYMS)) {
+      const r = (data?.reserves || []).find(x => symbols.includes(x.symbol));
+      if (!r) continue;
+      const RAY  = 1e27;
+      const div  = Math.pow(10, Number(r.decimals));
+      const lRate = Number(r.liquidityRate)  / RAY;
+      const bRate = Number(r.variableBorrowRate) / RAY;
+      const SECS  = 31_536_000;
+      const supplyApy = (Math.pow(1 + lRate / SECS, SECS) - 1) * 100;
+      const borrowApy = (Math.pow(1 + bRate / SECS, SECS) - 1) * 100;
+      const availLiq  = Number(r.availableLiquidity) / div;
+      const debt      = Number(r.totalCurrentVariableDebt) / div;
+      const marketSize = availLiq + debt;
+      const utilization = marketSize > 0 ? (debt / marketSize) * 100 : 0;
+      out[tok] = { supplyApy, borrowApy, utilization, availLiq, marketSize, demo: false };
+    }
+    return out;
+  } catch (e) {
+    console.warn(chain.name, e.message);
+    const s1 = chain.chainId ^ 0xabc;
+    const s2 = (chain.chainId ^ 0xdef) + 100;
+    return { USDC: mockRow(s1, 'USDC'), USDT: mockRow(s2, 'USDT'), _err: true };
+  }
+}
+
+async function refreshData() {
+  if (loading) return;
+  loading = true;
+
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('loading');
+
+  document.getElementById('tbl-body').innerHTML =
+    `<tr class="state-row loading-row"><td colspan="8">// FETCHING DATA FROM ${CHAINS.length} NETWORKS ...</td></tr>`;
+  document.getElementById('chain-count').textContent = '...';
+
+  const results = await Promise.allSettled(
+    CHAINS.map(c => fetchChain(c).then(d => ({ c, d })))
+  );
+
+  allData = {};
+  let ok = 0;
+  for (const r of results) {
+    if (r.status === 'fulfilled' && r.value.d) {
+      allData[r.value.c.id] = r.value.d;
+      ok++;
+    }
+  }
+
+  document.getElementById('chain-count').textContent = ok;
+  updateClock();
+  render();
+  rebuildTicker();
+  btn.classList.remove('loading');
+  loading = false;
+}
+
+/* ============================================================
+   FORMAT HELPERS
+   ============================================================ */
+const fPct = (v) => (v == null || isNaN(v)) ? '--' : v.toFixed(2) + '%';
+
+function fUSD(v) {
+  if (v == null || isNaN(v)) return '--';
+  if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
+  if (v >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M';
+  if (v >= 1e3) return '$' + (v / 1e3).toFixed(0) + 'K';
+  return '$' + v.toFixed(0);
+}
+
+function utilClass(u) {
+  if (u >= 92) return 'u-crit';
+  if (u >= 85) return 'u-high';
+  if (u >= 70) return 'u-med';
+  return 'u-low';
+}
+function liqClass(l) {
+  if (l < 5e6)  return 'liq-c';
+  if (l < 10e6) return 'liq-l';
+  if (l < 50e6) return 'liq-m';
+  return 'liq-h';
+}
+function riskOf(u, l) {
+  if (u >= 92 || l < 5e6)  return { label: 'CRITICAL', cls: 'r-crit', score: 3 };
+  if (u >= 85 || l < 10e6) return { label: 'HIGH',     cls: 'r-high', score: 2 };
+  if (u >= 70 || l < 50e6) return { label: 'MEDIUM',   cls: 'r-med',  score: 1 };
+  return                          { label: 'LOW',      cls: 'r-low',  score: 0 };
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render() {
+  const tbody   = document.getElementById('tbl-body');
+  const tok     = token;
+
+  // Build row objects
+  let rows = [];
+  for (const chain of CHAINS) {
+    const d = allData[chain.id]?.[tok];
+    rows.push({ chain, d });
+  }
+
+  // Sort
+  rows.sort((a, b) => {
+    const da = a.d, db = b.d;
+    if (!da && !db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
+    let va, vb;
+    switch (sortCol) {
+      case 'name':        va = a.chain.name;   vb = b.chain.name;   break;
+      case 'supplyApy':   va = da.supplyApy;   vb = db.supplyApy;   break;
+      case 'borrowApy':   va = da.borrowApy;   vb = db.borrowApy;   break;
+      case 'utilization': va = da.utilization; vb = db.utilization; break;
+      case 'availLiq':    va = da.availLiq;    vb = db.availLiq;    break;
+      case 'marketSize':  va = da.marketSize;  vb = db.marketSize;  break;
+      case 'risk':
+        va = riskOf(da.utilization, da.availLiq).score;
+        vb = riskOf(db.utilization, db.availLiq).score;
+        break;
+      default: va = 0; vb = 0;
+    }
+    if (typeof va === 'string') return va.localeCompare(vb) * sortDir;
+    return (va - vb) * sortDir;
+  });
+
+  // Stats
+  let sumApy = 0, sumUtil = 0, sumLiq = 0, highRisk = 0, n = 0;
+  for (const { d } of rows) {
+    if (!d) continue;
+    sumApy  += d.supplyApy;
+    sumUtil += d.utilization;
+    sumLiq  += d.availLiq;
+    const r = riskOf(d.utilization, d.availLiq);
+    if (r.score >= 2) highRisk++;
+    n++;
+  }
+  if (n) {
+    document.getElementById('s-apy').innerHTML  = (sumApy / n).toFixed(2) + '<span style="font-size:12px;color:var(--text-muted)">%</span>';
+    document.getElementById('s-util').innerHTML = (sumUtil / n).toFixed(1) + '<span style="font-size:12px;color:var(--text-muted)">%</span>';
+    document.getElementById('s-liq').textContent = fUSD(sumLiq);
+    document.getElementById('s-risk').textContent = highRisk;
+  }
+
+  // Build HTML
+  let html = '';
+  let lastVer = null;
+  for (const { chain, d } of rows) {
+    if (chain.ver !== lastVer) {
+      html += `<tr class="section-row"><td colspan="8">// AAVE ${chain.ver} POOLS</td></tr>`;
+      lastVer = chain.ver;
+    }
+
+    if (!d) {
+      html += `<tr class="${chain.ver === 'V4' ? 'row-v4' : ''}">
+        <td><div class="chain-cell">
+          <div class="chain-icon" style="background:${chain.col}18; border:1px solid ${chain.col}44; color:${chain.col}">${chain.abbr.slice(0,3)}</div>
+          <div><div class="chain-name">${chain.name}</div><div class="chain-ver">${chain.ver}</div></div>
+        </div></td>
+        <td colspan="7" style="color:var(--text-dim);font-size:10px;letter-spacing:.2em">// ASSET NOT DEPLOYED</td>
+      </tr>`;
+      continue;
+    }
+
+    const { supplyApy, borrowApy, utilization, availLiq, marketSize, demo } = d;
+    const uCls  = utilClass(utilization);
+    const lCls  = liqClass(availLiq);
+    const risk  = riskOf(utilization, availLiq);
+    const dTag  = demo ? '<span class="demo-tag">DEMO DATA</span>' : '';
+
+    html += `<tr class="${chain.ver === 'V4' ? 'row-v4' : ''}" style="animation:row-in .3s ease forwards">
+      <td>
+        <div class="chain-cell">
+          <div class="chain-icon" style="background:${chain.col}20; border:1px solid ${chain.col}55; color:${chain.col}">${chain.abbr.slice(0,3)}</div>
+          <div>
+            <div class="chain-name">${chain.name}</div>
+            <div class="chain-ver">${chain.chainId > 1 ? 'CHAIN ' + chain.chainId : 'MAINNET'}</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="risk-badge ${risk.cls}">${risk.label}</span></td>
+      <td><div class="val-supply">${fPct(supplyApy)}</div>${dTag}</td>
+      <td><div class="val-borrow">${fPct(borrowApy)}</div></td>
+      <td>
+        <div class="util-wrap ${uCls}">
+          <div class="util-top">
+            <span class="util-pct">${fPct(utilization)}</span>
+          </div>
+          <div class="util-track">
+            <div class="util-fill" style="width:${Math.min(utilization,100).toFixed(1)}%"></div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="liq-val ${lCls}">${fUSD(availLiq)}</div>
+        <div class="liq-lbl">WITHDRAWABLE</div>
+      </td>
+      <td>
+        <div class="mkt-val">${fUSD(marketSize)}</div>
+        <div class="mkt-lbl">TOTAL POOL</div>
+      </td>
+      <td>
+        <span style="font-size:9px; letter-spacing:.18em; color:${chain.ver==='V4'?'var(--purple)':'var(--cyan-dim)'}; border:1px solid ${chain.ver==='V4'?'var(--purple)':'var(--border-base)'}; padding:2px 6px">${chain.ver}</span>
+      </td>
+    </tr>`;
+  }
+
+  tbody.innerHTML = html || `<tr class="state-row empty-row"><td colspan="8">// NO DATA</td></tr>`;
+
+  // Update column sort indicators
+  document.querySelectorAll('th[data-col]').forEach(th => {
+    const col = th.dataset.col;
+    const arr = th.querySelector('.sort-arrow');
+    th.classList.toggle('sorted', col === sortCol);
+    if (arr) arr.textContent = col === sortCol ? (sortDir === -1 ? '▼' : '▲') : '↕';
+  });
+}
+
+/* ============================================================
+   TICKER
+   ============================================================ */
+function rebuildTicker() {
+  const tok = token;
+  const alerts = [];
+  for (const chain of CHAINS) {
+    const d = allData[chain.id]?.[tok];
+    if (!d) continue;
+    const r = riskOf(d.utilization, d.availLiq);
+    if (r.score >= 2) {
+      alerts.push({
+        text: `${chain.name} / ${tok}: UTIL ${fPct(d.utilization)} — ${r.label}`,
+        cls: r.score >= 3 ? 'crit' : 'warn',
+      });
+    }
+  }
+  if (!alerts.length) {
+    alerts.push({ text: 'ALL POOLS NOMINAL', cls: 'ok' });
+  }
+
+  const items = [...alerts, ...alerts].map(a =>
+    `<span class="ticker-item ${a.cls}">${a.text}</span>`
+  ).join('');
+
+  const track = document.getElementById('ticker-track');
+  track.innerHTML = items;
+  // Restart animation
+  track.style.animation = 'none';
+  track.offsetHeight;
+  track.style.animation = '';
+}
+
+/* ============================================================
+   CONTROLS
+   ============================================================ */
+function setToken(t) {
+  token = t;
+  document.getElementById('tab-usdc').classList.toggle('active', t === 'USDC');
+  document.getElementById('tab-usdt').classList.toggle('active', t === 'USDT');
+  render();
+  rebuildTicker();
+}
+
+function updateClock() {
+  const d = new Date();
+  const hh = String(d.getUTCHours()).padStart(2,'0');
+  const mm = String(d.getUTCMinutes()).padStart(2,'0');
+  const ss = String(d.getUTCSeconds()).padStart(2,'0');
+  document.getElementById('last-update').textContent = `LAST UPDATE: ${hh}:${mm}:${ss} UTC`;
+}
+
+// Column sort
+document.querySelectorAll('th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) { sortDir *= -1; }
+    else { sortCol = col; sortDir = col === 'name' ? 1 : -1; }
+    render();
+  });
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+refreshData();
+setInterval(refreshData, 60_000);
+</script>
+</body>
+</html>
