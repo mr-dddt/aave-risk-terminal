@@ -529,10 +529,10 @@
   <div style="overflow:hidden; flex:1;">
     <div class="ticker-track" id="ticker-track">
       <span class="ticker-item ok">SYSTEM ONLINE</span>
-      <span class="ticker-item">MONITORING 10 NETWORKS</span>
+      <span class="ticker-item">MONITORING 4 NETWORKS</span>
       <span class="ticker-item">AAVE V3 ACTIVE</span>
       <span class="ticker-item ok">SYSTEM ONLINE</span>
-      <span class="ticker-item">MONITORING 10 NETWORKS</span>
+      <span class="ticker-item">MONITORING 4 NETWORKS</span>
       <span class="ticker-item">AAVE V3 ACTIVE</span>
     </div>
   </div>
@@ -545,7 +545,7 @@
     <div>
       <div class="logo-eyebrow">// DEFI SURVEILLANCE SYSTEM — PROTOCOL RISK LAYER</div>
       <div class="logo-title">AAVE <em>RISK</em> TERMINAL</div>
-      <div class="logo-sub">Stablecoin Pool Monitor &nbsp;&bull;&nbsp; V3 &amp; V4 Networks &nbsp;&bull;&nbsp; Cross-Chain</div>
+      <div class="logo-sub">Stablecoin Pool Monitor &nbsp;&bull;&nbsp; ETH / ARB / BASE / POLYGON &nbsp;&bull;&nbsp; USDC &amp; USDT</div>
     </div>
     <div class="header-meta">
       <div class="live-pill"><div class="live-dot"></div>LIVE FEED</div>
@@ -556,10 +556,6 @@
 
   <!-- Controls -->
   <div class="controls">
-    <div class="token-tabs">
-      <button class="tab-btn active" id="tab-usdc" onclick="setToken('USDC')">USDC</button>
-      <button class="tab-btn"        id="tab-usdt" onclick="setToken('USDT')">USDT</button>
-    </div>
     <div class="controls-right">
       <div class="chain-tally">SCANNING <strong id="chain-count">0</strong> CHAINS</div>
       <button class="icon-btn" id="refresh-btn" onclick="refreshData()">
@@ -575,18 +571,25 @@
     <table>
       <thead>
         <tr>
-          <th style="min-width:170px" data-col="name">NETWORK <span class="sort-arrow"></span></th>
-          <th style="min-width:90px"  data-col="risk">RISK <span class="sort-arrow"></span></th>
-          <th style="min-width:105px" data-col="supplyApy">SUPPLY APY <span class="sort-arrow"></span></th>
-          <th style="min-width:105px" data-col="borrowApy">BORROW APY <span class="sort-arrow"></span></th>
-          <th style="min-width:195px" data-col="utilization">UTILIZATION <span class="sort-arrow"></span></th>
-          <th style="min-width:145px" data-col="availLiq">AVAIL. LIQUIDITY <span class="sort-arrow"></span></th>
-          <th style="min-width:135px" data-col="marketSize">MARKET SIZE <span class="sort-arrow"></span></th>
-          <th style="min-width:50px"  >VER.</th>
+          <th rowspan="2" style="min-width:170px" data-col="name">NETWORK <span class="sort-arrow"></span></th>
+          <th rowspan="2" style="min-width:90px"  data-col="risk">RISK <span class="sort-arrow"></span></th>
+          <th colspan="4" style="text-align:center; color:var(--green); border-bottom:1px solid var(--border-dim)">── USDC ──</th>
+          <th colspan="4" style="text-align:center; color:var(--amber); border-bottom:1px solid var(--border-dim)">── USDT ──</th>
+          <th rowspan="2" style="min-width:50px">VER.</th>
+        </tr>
+        <tr>
+          <th style="min-width:100px" data-col="usdcSupply">SUPPLY APY <span class="sort-arrow"></span></th>
+          <th style="min-width:100px" data-col="usdcBorrow">BORROW APY <span class="sort-arrow"></span></th>
+          <th style="min-width:170px" data-col="usdcUtil">UTILIZATION <span class="sort-arrow"></span></th>
+          <th style="min-width:130px" data-col="usdcLiq">AVAIL. LIQ <span class="sort-arrow"></span></th>
+          <th style="min-width:100px" data-col="usdtSupply">SUPPLY APY <span class="sort-arrow"></span></th>
+          <th style="min-width:100px" data-col="usdtBorrow">BORROW APY <span class="sort-arrow"></span></th>
+          <th style="min-width:170px" data-col="usdtUtil">UTILIZATION <span class="sort-arrow"></span></th>
+          <th style="min-width:130px" data-col="usdtLiq">AVAIL. LIQ <span class="sort-arrow"></span></th>
         </tr>
       </thead>
       <tbody id="tbl-body">
-        <tr class="state-row loading-row"><td colspan="8">// INITIALIZING DATA FEED ...</td></tr>
+        <tr class="state-row loading-row"><td colspan="11">// INITIALIZING DATA FEED ...</td></tr>
       </tbody>
     </table>
   </div>
@@ -594,19 +597,19 @@
   <!-- Summary Strip -->
   <div class="summary-strip">
     <div class="sum-item">
-      <div class="sum-lbl">AVG SUPPLY APY</div>
-      <div class="sum-val" id="s-apy">--.--<span style="font-size:12px; color:var(--text-muted)">%</span></div>
-      <div class="sum-sub">ACROSS ALL CHAINS</div>
+      <div class="sum-lbl">AVG USDC SUPPLY APY</div>
+      <div class="sum-val" id="s-apy-usdc">--.--<span style="font-size:12px; color:var(--text-muted)">%</span></div>
+      <div class="sum-sub">ACROSS 4 CHAINS</div>
     </div>
     <div class="sum-item">
-      <div class="sum-lbl">AVG UTILIZATION</div>
-      <div class="sum-val" id="s-util">--.--<span style="font-size:12px; color:var(--text-muted)">%</span></div>
-      <div class="sum-sub">WEIGHTED BY POOL SIZE</div>
+      <div class="sum-lbl">AVG USDT SUPPLY APY</div>
+      <div class="sum-val" id="s-apy-usdt">--.--<span style="font-size:12px; color:var(--text-muted)">%</span></div>
+      <div class="sum-sub">ACROSS 4 CHAINS</div>
     </div>
     <div class="sum-item">
       <div class="sum-lbl">TOTAL AVAIL. LIQUIDITY</div>
       <div class="sum-val" id="s-liq">$--.-<span style="font-size:12px; color:var(--text-muted)">B</span></div>
-      <div class="sum-sub">WITHDRAWABLE NOW</div>
+      <div class="sum-sub">USDC + USDT COMBINED</div>
     </div>
     <div class="sum-item">
       <div class="sum-lbl">HIGH RISK POOLS</div>
@@ -651,6 +654,7 @@
 
 </div><!-- /container -->
 
+<script src="config.js"></script>
 <script>
 /* ============================================================
    CONFIG
@@ -660,32 +664,17 @@
  * Drop your Graph API key here (https://thegraph.com/studio/)
  * Leave empty to run in demo mode with realistic mock data.
  */
-const GRAPH_API_KEY = '';
+const GRAPH_API_KEY = window.GRAPH_API_KEY || '';
 
 const CHAINS = [
-  { id: 'ethereum',  name: 'ETHEREUM',   ver: 'V3', abbr: 'ETH',  col: '#627eea', chainId: 1,
+  { id: 'ethereum', name: 'ETHEREUM', ver: 'V3', abbr: 'ETH',  col: '#627eea', chainId: 1,
     url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3' },
-  { id: 'arbitrum',  name: 'ARBITRUM',   ver: 'V3', abbr: 'ARB',  col: '#28a0f0', chainId: 42161,
+  { id: 'arbitrum', name: 'ARBITRUM', ver: 'V3', abbr: 'ARB',  col: '#28a0f0', chainId: 42161,
     url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-arbitrum' },
-  { id: 'polygon',   name: 'POLYGON',    ver: 'V3', abbr: 'POL',  col: '#8247e5', chainId: 137,
-    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-polygon' },
-  { id: 'optimism',  name: 'OPTIMISM',   ver: 'V3', abbr: 'OPT',  col: '#ff0420', chainId: 10,
-    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-optimism' },
-  { id: 'base',      name: 'BASE',       ver: 'V3', abbr: 'BASE', col: '#0052ff', chainId: 8453,
+  { id: 'base',     name: 'BASE',     ver: 'V3', abbr: 'BASE', col: '#0052ff', chainId: 8453,
     url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-base' },
-  { id: 'avalanche', name: 'AVALANCHE',  ver: 'V3', abbr: 'AVAX', col: '#e84142', chainId: 43114,
-    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-avalanche' },
-  { id: 'gnosis',    name: 'GNOSIS',     ver: 'V3', abbr: 'GNO',  col: '#048848', chainId: 100,
-    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-gnosis' },
-  { id: 'scroll',    name: 'SCROLL',     ver: 'V3', abbr: 'SCR',  col: '#ffeeda', chainId: 534352,
-    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-scroll' },
-  { id: 'bnb',       name: 'BNB CHAIN',  ver: 'V3', abbr: 'BNB',  col: '#f3ba2f', chainId: 56,
-    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-bnb' },
-  { id: 'metis',     name: 'METIS',      ver: 'V3', abbr: 'MTS',  col: '#00dacc', chainId: 1088,
-    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-metis' },
-  /* Aave V4 — uncomment when live
-  { id: 'ethereum-v4', name: 'ETHEREUM', ver: 'V4', abbr: 'ETH',  col: '#627eea', chainId: 1, url: '' },
-  */
+  { id: 'polygon',  name: 'POLYGON',  ver: 'V3', abbr: 'POL',  col: '#8247e5', chainId: 137,
+    url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-polygon' },
 ];
 
 // Token symbol variants per asset
@@ -708,9 +697,8 @@ const GQL = `
 /* ============================================================
    STATE
    ============================================================ */
-let token     = 'USDC';
 let allData   = {};          // { chainId: { USDC: {...}, USDT: {...} } }
-let sortCol   = 'utilization';
+let sortCol   = 'usdcUtil';
 let sortDir   = -1;          // -1 = desc, 1 = asc
 let loading   = false;
 
@@ -848,34 +836,40 @@ function riskOf(u, l) {
    RENDER
    ============================================================ */
 function render() {
-  const tbody   = document.getElementById('tbl-body');
-  const tok     = token;
+  const tbody = document.getElementById('tbl-body');
 
-  // Build row objects
+  // Build row objects with both tokens
   let rows = [];
   for (const chain of CHAINS) {
-    const d = allData[chain.id]?.[tok];
-    rows.push({ chain, d });
+    const du = allData[chain.id]?.USDC;
+    const dt = allData[chain.id]?.USDT;
+    rows.push({ chain, du, dt });
+  }
+
+  // Worst risk across USDC + USDT
+  function worstRisk(du, dt) {
+    const ru = du ? riskOf(du.utilization, du.availLiq) : null;
+    const rt = dt ? riskOf(dt.utilization, dt.availLiq) : null;
+    if (!ru && !rt) return null;
+    if (!ru) return rt;
+    if (!rt) return ru;
+    return ru.score >= rt.score ? ru : rt;
   }
 
   // Sort
   rows.sort((a, b) => {
-    const da = a.d, db = b.d;
-    if (!da && !db) return 0;
-    if (!da) return 1;
-    if (!db) return -1;
     let va, vb;
     switch (sortCol) {
-      case 'name':        va = a.chain.name;   vb = b.chain.name;   break;
-      case 'supplyApy':   va = da.supplyApy;   vb = db.supplyApy;   break;
-      case 'borrowApy':   va = da.borrowApy;   vb = db.borrowApy;   break;
-      case 'utilization': va = da.utilization; vb = db.utilization; break;
-      case 'availLiq':    va = da.availLiq;    vb = db.availLiq;    break;
-      case 'marketSize':  va = da.marketSize;  vb = db.marketSize;  break;
-      case 'risk':
-        va = riskOf(da.utilization, da.availLiq).score;
-        vb = riskOf(db.utilization, db.availLiq).score;
-        break;
+      case 'name':       va = a.chain.name;        vb = b.chain.name;        break;
+      case 'risk':       va = worstRisk(a.du, a.dt)?.score ?? -1; vb = worstRisk(b.du, b.dt)?.score ?? -1; break;
+      case 'usdcSupply': va = a.du?.supplyApy   ?? -1; vb = b.du?.supplyApy   ?? -1; break;
+      case 'usdcBorrow': va = a.du?.borrowApy   ?? -1; vb = b.du?.borrowApy   ?? -1; break;
+      case 'usdcUtil':   va = a.du?.utilization ?? -1; vb = b.du?.utilization ?? -1; break;
+      case 'usdcLiq':    va = a.du?.availLiq    ?? -1; vb = b.du?.availLiq    ?? -1; break;
+      case 'usdtSupply': va = a.dt?.supplyApy   ?? -1; vb = b.dt?.supplyApy   ?? -1; break;
+      case 'usdtBorrow': va = a.dt?.borrowApy   ?? -1; vb = b.dt?.borrowApy   ?? -1; break;
+      case 'usdtUtil':   va = a.dt?.utilization ?? -1; vb = b.dt?.utilization ?? -1; break;
+      case 'usdtLiq':    va = a.dt?.availLiq    ?? -1; vb = b.dt?.availLiq    ?? -1; break;
       default: va = 0; vb = 0;
     }
     if (typeof va === 'string') return va.localeCompare(vb) * sortDir;
@@ -883,50 +877,41 @@ function render() {
   });
 
   // Stats
-  let sumApy = 0, sumUtil = 0, sumLiq = 0, highRisk = 0, n = 0;
-  for (const { d } of rows) {
-    if (!d) continue;
-    sumApy  += d.supplyApy;
-    sumUtil += d.utilization;
-    sumLiq  += d.availLiq;
-    const r = riskOf(d.utilization, d.availLiq);
-    if (r.score >= 2) highRisk++;
-    n++;
+  let sumApyU = 0, sumApyT = 0, sumLiq = 0, highRisk = 0, nU = 0, nT = 0;
+  for (const { du, dt } of rows) {
+    if (du) { sumApyU += du.supplyApy; sumLiq += du.availLiq; nU++; }
+    if (dt) { sumApyT += dt.supplyApy; sumLiq += dt.availLiq; nT++; }
+    const r = worstRisk(du, dt);
+    if (r && r.score >= 2) highRisk++;
   }
-  if (n) {
-    document.getElementById('s-apy').innerHTML  = (sumApy / n).toFixed(2) + '<span style="font-size:12px;color:var(--text-muted)">%</span>';
-    document.getElementById('s-util').innerHTML = (sumUtil / n).toFixed(1) + '<span style="font-size:12px;color:var(--text-muted)">%</span>';
-    document.getElementById('s-liq').textContent = fUSD(sumLiq);
-    document.getElementById('s-risk').textContent = highRisk;
+  if (nU) document.getElementById('s-apy-usdc').innerHTML = (sumApyU / nU).toFixed(2) + '<span style="font-size:12px;color:var(--text-muted)">%</span>';
+  if (nT) document.getElementById('s-apy-usdt').innerHTML = (sumApyT / nT).toFixed(2) + '<span style="font-size:12px;color:var(--text-muted)">%</span>';
+  document.getElementById('s-liq').textContent  = fUSD(sumLiq);
+  document.getElementById('s-risk').textContent = highRisk;
+
+  // Render 4 token cells (supply, borrow, util, liq)
+  function tokenCells(d) {
+    if (!d) return `<td class="val-na">--</td><td class="val-na">--</td><td class="val-na">--</td><td class="val-na">--</td>`;
+    const uCls = utilClass(d.utilization);
+    const lCls = liqClass(d.availLiq);
+    const dTag = d.demo ? '<span class="demo-tag">DEMO</span>' : '';
+    return `
+      <td><div class="val-supply">${fPct(d.supplyApy)}</div>${dTag}</td>
+      <td><div class="val-borrow">${fPct(d.borrowApy)}</div></td>
+      <td>
+        <div class="util-wrap ${uCls}">
+          <div class="util-top"><span class="util-pct">${fPct(d.utilization)}</span></div>
+          <div class="util-track"><div class="util-fill" style="width:${Math.min(d.utilization,100).toFixed(1)}%"></div></div>
+        </div>
+      </td>
+      <td><div class="liq-val ${lCls}">${fUSD(d.availLiq)}</div><div class="liq-lbl">AVAIL</div></td>`;
   }
 
   // Build HTML
   let html = '';
-  let lastVer = null;
-  for (const { chain, d } of rows) {
-    if (chain.ver !== lastVer) {
-      html += `<tr class="section-row"><td colspan="8">// AAVE ${chain.ver} POOLS</td></tr>`;
-      lastVer = chain.ver;
-    }
-
-    if (!d) {
-      html += `<tr class="${chain.ver === 'V4' ? 'row-v4' : ''}">
-        <td><div class="chain-cell">
-          <div class="chain-icon" style="background:${chain.col}18; border:1px solid ${chain.col}44; color:${chain.col}">${chain.abbr.slice(0,3)}</div>
-          <div><div class="chain-name">${chain.name}</div><div class="chain-ver">${chain.ver}</div></div>
-        </div></td>
-        <td colspan="7" style="color:var(--text-dim);font-size:10px;letter-spacing:.2em">// ASSET NOT DEPLOYED</td>
-      </tr>`;
-      continue;
-    }
-
-    const { supplyApy, borrowApy, utilization, availLiq, marketSize, demo } = d;
-    const uCls  = utilClass(utilization);
-    const lCls  = liqClass(availLiq);
-    const risk  = riskOf(utilization, availLiq);
-    const dTag  = demo ? '<span class="demo-tag">DEMO DATA</span>' : '';
-
-    html += `<tr class="${chain.ver === 'V4' ? 'row-v4' : ''}" style="animation:row-in .3s ease forwards">
+  for (const { chain, du, dt } of rows) {
+    const risk = worstRisk(du, dt);
+    html += `<tr style="animation:row-in .3s ease forwards">
       <td>
         <div class="chain-cell">
           <div class="chain-icon" style="background:${chain.col}20; border:1px solid ${chain.col}55; color:${chain.col}">${chain.abbr.slice(0,3)}</div>
@@ -936,36 +921,16 @@ function render() {
           </div>
         </div>
       </td>
-      <td><span class="risk-badge ${risk.cls}">${risk.label}</span></td>
-      <td><div class="val-supply">${fPct(supplyApy)}</div>${dTag}</td>
-      <td><div class="val-borrow">${fPct(borrowApy)}</div></td>
-      <td>
-        <div class="util-wrap ${uCls}">
-          <div class="util-top">
-            <span class="util-pct">${fPct(utilization)}</span>
-          </div>
-          <div class="util-track">
-            <div class="util-fill" style="width:${Math.min(utilization,100).toFixed(1)}%"></div>
-          </div>
-        </div>
-      </td>
-      <td>
-        <div class="liq-val ${lCls}">${fUSD(availLiq)}</div>
-        <div class="liq-lbl">WITHDRAWABLE</div>
-      </td>
-      <td>
-        <div class="mkt-val">${fUSD(marketSize)}</div>
-        <div class="mkt-lbl">TOTAL POOL</div>
-      </td>
-      <td>
-        <span style="font-size:9px; letter-spacing:.18em; color:${chain.ver==='V4'?'var(--purple)':'var(--cyan-dim)'}; border:1px solid ${chain.ver==='V4'?'var(--purple)':'var(--border-base)'}; padding:2px 6px">${chain.ver}</span>
-      </td>
+      <td>${risk ? `<span class="risk-badge ${risk.cls}">${risk.label}</span>` : '<span class="val-na">--</span>'}</td>
+      ${tokenCells(du)}
+      ${tokenCells(dt)}
+      <td><span style="font-size:9px; letter-spacing:.18em; color:var(--cyan-dim); border:1px solid var(--border-base); padding:2px 6px">${chain.ver}</span></td>
     </tr>`;
   }
 
-  tbody.innerHTML = html || `<tr class="state-row empty-row"><td colspan="8">// NO DATA</td></tr>`;
+  tbody.innerHTML = html || `<tr class="state-row empty-row"><td colspan="11">// NO DATA</td></tr>`;
 
-  // Update column sort indicators
+  // Update sort indicators
   document.querySelectorAll('th[data-col]').forEach(th => {
     const col = th.dataset.col;
     const arr = th.querySelector('.sort-arrow');
@@ -978,17 +943,18 @@ function render() {
    TICKER
    ============================================================ */
 function rebuildTicker() {
-  const tok = token;
   const alerts = [];
   for (const chain of CHAINS) {
-    const d = allData[chain.id]?.[tok];
-    if (!d) continue;
-    const r = riskOf(d.utilization, d.availLiq);
-    if (r.score >= 2) {
-      alerts.push({
-        text: `${chain.name} / ${tok}: UTIL ${fPct(d.utilization)} — ${r.label}`,
-        cls: r.score >= 3 ? 'crit' : 'warn',
-      });
+    for (const tok of ['USDC', 'USDT']) {
+      const d = allData[chain.id]?.[tok];
+      if (!d) continue;
+      const r = riskOf(d.utilization, d.availLiq);
+      if (r.score >= 2) {
+        alerts.push({
+          text: `${chain.name} / ${tok}: UTIL ${fPct(d.utilization)} — ${r.label}`,
+          cls: r.score >= 3 ? 'crit' : 'warn',
+        });
+      }
     }
   }
   if (!alerts.length) {
@@ -1005,17 +971,6 @@ function rebuildTicker() {
   track.style.animation = 'none';
   track.offsetHeight;
   track.style.animation = '';
-}
-
-/* ============================================================
-   CONTROLS
-   ============================================================ */
-function setToken(t) {
-  token = t;
-  document.getElementById('tab-usdc').classList.toggle('active', t === 'USDC');
-  document.getElementById('tab-usdt').classList.toggle('active', t === 'USDT');
-  render();
-  rebuildTicker();
 }
 
 function updateClock() {
