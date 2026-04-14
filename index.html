@@ -667,6 +667,7 @@
 const GRAPH_API_KEY = window.GRAPH_API_KEY || '';
 
 const CHAINS = [
+  // ── Aave V3 ──────────────────────────────────────────────────────────────
   { id: 'ethereum', name: 'ETHEREUM', ver: 'V3', abbr: 'ETH',  col: '#627eea', chainId: 1,
     url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3' },
   { id: 'arbitrum', name: 'ARBITRUM', ver: 'V3', abbr: 'ARB',  col: '#28a0f0', chainId: 42161,
@@ -675,6 +676,16 @@ const CHAINS = [
     url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-base' },
   { id: 'polygon',  name: 'POLYGON',  ver: 'V3', abbr: 'POL',  col: '#8247e5', chainId: 137,
     url: 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3-polygon' },
+
+  // ── Aave V4 — paste subgraph URLs from https://thegraph.com/explorer ─────
+  { id: 'ethereum-v4', name: 'ETHEREUM', ver: 'V4', abbr: 'ETH',  col: '#627eea', chainId: 1,
+    url: '' },
+  { id: 'arbitrum-v4', name: 'ARBITRUM', ver: 'V4', abbr: 'ARB',  col: '#28a0f0', chainId: 42161,
+    url: '' },
+  { id: 'base-v4',     name: 'BASE',     ver: 'V4', abbr: 'BASE', col: '#0052ff', chainId: 8453,
+    url: '' },
+  { id: 'polygon-v4',  name: 'POLYGON',  ver: 'V4', abbr: 'POL',  col: '#8247e5', chainId: 137,
+    url: '' },
 ];
 
 // Token symbol variants per asset
@@ -722,6 +733,8 @@ function mockRow(seed, tok) {
    FETCH
    ============================================================ */
 async function fetchChain(chain) {
+  if (!chain.url) return null;  // V4 subgraph not yet configured
+
   if (!GRAPH_API_KEY) {
     const s1 = chain.chainId ^ 0xabc;
     const s2 = (chain.chainId ^ 0xdef) + 100;
@@ -776,7 +789,7 @@ async function refreshData() {
   btn.classList.add('loading');
 
   document.getElementById('tbl-body').innerHTML =
-    `<tr class="state-row loading-row"><td colspan="8">// FETCHING DATA FROM ${CHAINS.length} NETWORKS ...</td></tr>`;
+    `<tr class="state-row loading-row"><td colspan="11">// FETCHING DATA FROM ${CHAINS.filter(c=>c.url).length} NETWORKS ...</td></tr>`;
   document.getElementById('chain-count').textContent = '...';
 
   const results = await Promise.allSettled(
@@ -856,8 +869,9 @@ function render() {
     return ru.score >= rt.score ? ru : rt;
   }
 
-  // Sort
+  // Sort — V3 always before V4, then by selected column within each group
   rows.sort((a, b) => {
+    if (a.chain.ver !== b.chain.ver) return a.chain.ver === 'V3' ? -1 : 1;
     let va, vb;
     switch (sortCol) {
       case 'name':       va = a.chain.name;        vb = b.chain.name;        break;
@@ -909,7 +923,26 @@ function render() {
 
   // Build HTML
   let html = '';
+  let lastVer = null;
   for (const { chain, du, dt } of rows) {
+    if (chain.ver !== lastVer) {
+      const verCol = chain.ver === 'V4' ? 'var(--purple)' : 'var(--cyan-dim)';
+      html += `<tr class="section-row"><td colspan="11" style="color:${verCol}">// AAVE ${chain.ver} POOLS ${chain.ver === 'V4' && !chain.url ? '— CONFIGURE SUBGRAPH URL TO ACTIVATE' : ''}</td></tr>`;
+      lastVer = chain.ver;
+    }
+
+    // V4 with no URL configured → show pending row
+    if (!chain.url) {
+      html += `<tr style="opacity:.45">
+        <td><div class="chain-cell">
+          <div class="chain-icon" style="background:${chain.col}20; border:1px solid ${chain.col}55; color:${chain.col}">${chain.abbr.slice(0,3)}</div>
+          <div><div class="chain-name">${chain.name}</div><div class="chain-ver">CHAIN ${chain.chainId}</div></div>
+        </div></td>
+        <td colspan="10" style="color:var(--text-dim);font-size:10px;letter-spacing:.2em">// SUBGRAPH NOT CONFIGURED — SEE README</td>
+      </tr>`;
+      continue;
+    }
+
     const risk = worstRisk(du, dt);
     html += `<tr style="animation:row-in .3s ease forwards">
       <td>
